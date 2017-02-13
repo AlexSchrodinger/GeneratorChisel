@@ -1,36 +1,56 @@
 package ru.bernarsoft;
 
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+
+import static ru.bernarsoft.Main.isChecker;
+import static ru.bernarsoft.Main.setCheckerFalse;
 
 public class VivodChisel implements Runnable{
 
-    private Generator generator;
-    ArrayList<Integer> list;
-    Map<Integer, Integer> map = new HashMap<Integer, Integer>();
+    private Map<Integer, Integer> map = new HashMap<>();
+    private Queue<Integer> intQueue;
+    private Object lock;
+    private int count = 0;
+
+    public VivodChisel(Object lock, Queue<Integer> intQueue) {
+        this.lock = lock;
+        this.intQueue = intQueue;
+    }
 
     public void run() {
-        try {
-            list = generator.get();
-            for (int i = 0; i < list.size(); i++) {
-                Integer tmpInt = list.get(i);
 
-                if (!map.containsKey(tmpInt)) {
-                    map.put(tmpInt, 1);
-                } else {
-                    map.put(tmpInt, map.get(tmpInt) + 1);
-                }
+        while (isChecker()) {
 
-                for (Map.Entry<Integer, Integer> entry : map.entrySet()) {
-                    System.out.println(entry.getKey() + " Повторений = " + entry.getValue());
+            synchronized (lock) {
+                try {
+                    lock.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
 
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+            if(intQueue.peek() != null) {
+                int tmp = intQueue.poll();
+                if(!map.containsKey(tmp)) {
+                    map.put(tmp, 1);
+                }
+                else {
+                    map.replace(tmp, map.get(tmp) + 1);
+                }
+
+                if(count % 5 == 0) {
+                    System.out.println("");
+                    map.forEach((key, value) -> {
+                        System.out.println(key + " повторилось - " + value + " раз");
+                        if(value >= 5) {
+                            setCheckerFalse();
+                        }
+                    });
+                }
+            }
         }
+
 
 
     }
